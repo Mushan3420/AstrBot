@@ -47,7 +47,7 @@ class CommandRevChatGPT(Command):
             return True, (False, "未知指令", "unknown_command")
         return False, None
 
-    def reset(self, session_id):
+    def reset(self, session_id = None):
         self.provider.forget(session_id)
         return True, "重置完毕。", "reset"
     

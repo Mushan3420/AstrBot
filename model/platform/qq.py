@@ -4,7 +4,8 @@ from util.cmd_config import CmdConfig
 import asyncio
 from nakuru import (
     CQHTTP,
-    GuildMessage
+    GuildMessage,
+    GroupMessage
 )
 import time
 

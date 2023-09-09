@@ -32,6 +32,7 @@ from util.cmd_config import CmdConfig as cc
 import util.gplugin as gplugin
 from PIL import Image as PILImage
 import io
+import random
 
 
 
@@ -137,7 +138,9 @@ bing_cache_loop = None
 cached_plugins = {}
 
 # 全局对象
-_global_object = {}
+_global_object = {
+    'group_msg_list': {},
+}
 
 # 统计
 cnt_total = 0
@@ -547,6 +550,16 @@ def oper_msg(message,
     if platform == PLATFORM_QQCHAN:
         with_tag = True
 
+    # 群消息记录
+    if message.type == "GroupMessage":
+        if message.group_id == 703693608 or message.group_id == 322154837:
+            if message.group_id not in _global_object['group_msg_list']:
+                _global_object['group_msg_list'][message.group_id] = []
+            _global_object['group_msg_list'][message.group_id].append(qq_msg)
+            if len(_global_object['group_msg_list'][message.group_id]) > 10:
+                _global_object['group_msg_list'][message.group_id].pop(0)
+
+
     if qq_msg == "":
         send_message(platform, message,  f"Hi~", msg_ref=msg_ref, session_id=session_id)
         return
@@ -630,10 +643,30 @@ def oper_msg(message,
 
     # 指令触发情况
     if not hit:
+        is_active = False # 主动回消息-测试
+        
         if not with_tag:
-            return
+            if message.type == "GroupMessage":
+                if message.group_id in _global_object['group_msg_list'] and len(_global_object['group_msg_list'][message.group_id]) > 5:
+                    print(_global_object['group_msg_list'][message.group_id])
+                    # 主动回消息-测试
+                    if qq_msg == "你觉得呢":
+                        gu.log("你觉得呢触发", level=gu.LEVEL_DEBUG)
+                        is_active = True
+                    # 90%的概率主动回复
+                    if random.random() < 0.1:
+                        is_active = True
+                    if is_active:
+                        gu.log("触发主动回复", level=gu.LEVEL_DEBUG)
+                        recent_msg = ""
+                        recent_msg = "\n- ".join(_global_object['group_msg_list'][message.group_id])
+                        qq_msg = f"下面你是一个群里的见识广的普通成员，群友们现在在讨论的内容如下：{recent_msg}, 现在你参与这个讨论。注意:回答需要短一点；总结就行；语气可爱一点，可以在回答的末尾加上emoji或颜文字；讨论的内容分为闲聊和讨论专业知识，如果是专业知识，请给出严谨的解决方案或者个人观点。如果是闲聊，请你结合你自己的知识给出自己的见解，你的回答被限定在20字以内；如果有政治敏感或者其他违法话题，请避开不谈并指责他们；。直接输出你要说的话："
+                        gu.log(qq_msg, level=gu.LEVEL_DEBUG)
+            if not is_active:
+                return
         if chosen_provider == None:
-            send_message(platform, message, f"管理员未启动任何语言模型或者语言模型初始化时失败。", msg_ref=msg_ref, session_id=session_id)
+            if not is_active:
+                send_message(platform, message, f"管理员未启动任何语言模型或者语言模型初始化时失败。", msg_ref=msg_ref, session_id=session_id)
             return
         try:
             if chosen_provider == REV_CHATGPT or chosen_provider == OPENAI_OFFICIAL:
